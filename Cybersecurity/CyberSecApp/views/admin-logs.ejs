@@ -1,0 +1,35 @@
+<%- include('layout') %>
+
+<h2>Logi aktywności</h2>
+
+<% if (!logs || logs.length === 0) { %>
+  <p>Brak wpisów w logach.</p>
+<% } else { %>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Data / czas</th>
+        <th>Użytkownik</th>
+        <th>Akcja</th>
+        <th>Szczegóły</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% logs.forEach((l, idx) => { %>
+        <tr>
+          <td><%= l.id %></td>
+          <td><%= new Date(l.created_at).toLocaleString('pl-PL') %></td>
+          <td><%= l.username || '-' %></td>
+          <td><%= l.event %></td>
+          <td><%= l.details || '' %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+<% } %>
+
+<p><a href="/admin/settings">Powrót do ustawień</a></p>
+<p><a href="/logout">Wyloguj</a></p>
+
+<%- include('footer') %>

@@ -1,16 +1,6 @@
-import fs from 'fs';
-
 let db;
 
-function ensureDataDir() {
-  const dataDir = path.join(process.cwd(), 'data');
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
-  }
-}
-
 async function initDb(sqlite3, open, argon2) {
-  ensureDataDir();
   db = await open({ filename: './data/db.sqlite', driver: sqlite3.Database });
 
   await db.exec(`

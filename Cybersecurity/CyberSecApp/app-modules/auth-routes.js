@@ -85,7 +85,7 @@ router.post('/login', loginLimiter, async (req, res) => {
 
 // Wylogowanie
 router.get('/logout', async (req, res) => {
-  await logEvent(username, 'logout_success', 'Wylogowano pomyślnie');
+  await logEvent(user.username, 'logout_success', 'Wylogowano pomyślnie');
   req.session.destroy(() => {
     res.redirect('/login');
   });

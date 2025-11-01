@@ -1,4 +1,5 @@
-import { getDb } from './db.js';
+import dbModule from './db.js';
+const { getDb } = dbModule;
 
 export async function logEvent(username, event, details = '') {
   const db = getDb();

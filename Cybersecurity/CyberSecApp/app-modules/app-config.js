@@ -17,6 +17,7 @@ export default function configureApp(app, {
   userRoutes = null,
   adminSettingsRoutes = null,
   adminUsersRoutes = null,
+  adminLogsRoutes = null,
   sessionSecret = process.env.SESSION_SECRET,
   sessionOptions = {}
 } = {}) {

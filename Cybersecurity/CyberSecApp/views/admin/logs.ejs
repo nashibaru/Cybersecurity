@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logi Aktywności</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Logi Aktywności</h1>
+            <% if (user) { %>
+                <small class="user-info">
+                    Zalogowany jako: <strong><%= user.username %></strong> (<%= user.role %>)
+                </small>
+            <% } %>
+        </header>
+
+        <main>
+            <div class="page-header">
+                <h2>Logi aktywności systemu</h2>
+            </div>
+
+            <nav class="nav-links">
+                <a href="/admin/settings">Ustawienia</a>
+                <a href="/admin/users">Użytkownicy</a>
+                <a href="/admin/logs">Logi</a>
+                <a href="/user/change-password">Zmiana hasła</a>
+                <a href="/logout">Wyloguj</a>
+            </nav>
+
+            <% if (!logs || logs.length === 0) { %>
+                <div class="text-center py-4">
+                    <div style="font-size: 3rem; color: #6c757d;">📝</div>
+                    <h4 class="mt-2">Brak wpisów w logach</h4>
+                    <p class="text-muted">Nie znaleziono żadnych zdarzeń spełniających kryteria wyszukiwania.</p>
+                </div>
+            <% } else { %>
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Data / czas</th>
+                                <th>Użytkownik</th>
+                                <th>Akcja</th>
+                                <th>Szczegóły</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% logs.forEach((log, index) => { %>
+                                <tr>
+                                    <td><%= log.id %></td>
+                                    <td><%= new Date(log.created_at).toLocaleString('pl-PL') %></td>
+                                    <td><%= log.username || '-' %></td>
+                                    <td><%= log.event %></td>
+                                    <td><%= log.details || '' %></td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+            <% } %>
+        </main>
+
+        <footer style="text-align: center; padding: 2rem; color: #6c757d; border-top: 1px solid #dee2e6;">
+            <p>&copy; <%= new Date().getFullYear() %> System Bezpieczeństwa. Wszelkie prawa zastrzeżone.</p>
+        </footer>
+    </div>
+</body>
+</html>

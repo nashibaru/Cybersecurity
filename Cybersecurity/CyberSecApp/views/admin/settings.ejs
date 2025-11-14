@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ustawienia Bezpieczeństwa</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Ustawienia Bezpieczeństwa</h1>
+            <% if (user) { %>
+                <small class="user-info">
+                    Zalogowany jako: <strong><%= user.username %></strong> (<%= user.role %>)
+                </small>
+            <% } %>
+        </header>
+
+        <main>
+            <div class="page-header">
+                <h2>Ustawienia bezpieczeństwa</h2>
+            </div>
+
+            <% if (message) { %>
+                <div class="alert alert-success">
+                    <%= message %>
+                </div>
+            <% } %>
+
+            <nav class="nav-links">
+                <a href="/admin/settings">Ustawienia</a>
+                <a href="/admin/users">Użytkownicy</a>
+                <a href="/admin/logs">Logi</a>
+                <a href="/user/change-password">Zmiana hasła</a>
+                <a href="/logout">Wyloguj</a>
+            </nav>
+
+            <div class="card">
+                <div class="card-header">
+                    Polityka haseł
+                </div>
+                <div class="card-body">
+                    <form method="post" action="/admin/settings">
+                        <div class="form-group">
+                            <label>Minimalna długość hasła:</label>
+                            <input type="number" name="min_length" 
+                                   class="form-control" 
+                                   value="<%= settings.min_length %>" 
+                                   min="4" max="128" required>
+                        </div>
+
+                        <div class="form-check">
+                            <input type="checkbox" name="require_special" 
+                                   id="require_special" 
+                                   <%= settings.require_special ? 'checked' : '' %>>
+                            <label for="require_special">Wymagaj znaków specjalnych</label>
+                        </div>
+
+                        <div class="form-check">
+                            <input type="checkbox" name="require_lowercase" 
+                                   id="require_lowercase" 
+                                   <%= settings.require_lowercase ? 'checked' : '' %>>
+                            <label for="require_lowercase">Wymagaj małych liter</label>
+                        </div>
+
+                        <div class="form-check">
+                            <input type="checkbox" name="require_uppercase" 
+                                   id="require_uppercase" 
+                                   <%= settings.require_uppercase ? 'checked' : '' %>>
+                            <label for="require_uppercase">Wymagaj wielkich liter</label>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Ważność hasła (dni):</label>
+                            <input type="number" name="pwd_valid_days" 
+                                   class="form-control" 
+                                   value="<%= settings.pwd_valid_days %>" 
+                                   min="1" max="365" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Maksymalna liczba nieudanych logowań:</label>
+                            <input type="number" name="login_max_attempts" 
+                                   class="form-control" 
+                                   value="<%= settings.login_max_attempts || 5 %>" 
+                                   min="1" max="20" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Czas blokady konta (minuty):</label>
+                            <input type="number" name="lock_minutes" 
+                                   class="form-control" 
+                                   value="<%= settings.lock_minutes || 15 %>" 
+                                   min="1" max="1440" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Automatyczne wylogowanie po nieaktywności (minuty):</label>
+                            <input type="number" name="session_timeout_minutes" 
+                                   class="form-control" 
+                                   value="<%= settings.session_timeout_minutes %>" 
+                                   min="1" max="1440" required>
+                        </div>
+
+                        <button type="submit" class="btn btn-success">
+                            💾 Zapisz ustawienia
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </main>
+
+        <footer style="text-align: center; padding: 2rem; color: #6c757d; border-top: 1px solid #dee2e6;">
+            <p>&copy; <%= new Date().getFullYear() %> System Bezpieczeństwa. Wszelkie prawa zastrzeżone.</p>
+        </footer>
+    </div>
+</body>
+</html>

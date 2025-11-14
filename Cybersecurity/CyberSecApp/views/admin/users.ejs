@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zarządzanie Użytkownikami</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Zarządzanie Użytkownikami</h1>
+            <% if (user) { %>
+                <small class="user-info">
+                    Zalogowany jako: <strong><%= user.username %></strong> (<%= user.role %>)
+                </small>
+            <% } %>
+        </header>
+
+        <main>
+            <div class="page-header">
+                <h2>Zarządzanie użytkownikami</h2>
+            </div>
+
+            <% if (message) { %>
+                <div class="alert alert-success">
+                    <%= message %>
+                </div>
+            <% } %>
+
+            <nav class="nav-links">
+                <a href="/admin/settings">Ustawienia</a>
+                <a href="/admin/users">Użytkownicy</a>
+                <a href="/admin/logs">Logi</a>
+                <a href="/user/change-password">Zmiana hasła</a>
+                <a href="/logout">Wyloguj</a>
+            </nav>
+
+            <!-- Users List -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    Lista użytkowników (<%= users.length %>)
+                </div>
+                <div class="card-body">
+                    <% if (users.length === 0) { %>
+                        <p class="text-center">Brak użytkowników w systemie.</p>
+                    <% } else { %>
+                        <div class="table-container">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Login</th>
+                                        <th>Imię i nazwisko</th>
+                                        <th>Rola</th>
+                                        <th>Status</th>
+                                        <th>Akcje</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% users.forEach(u => { %>
+                                        <tr>
+                                            <td><strong>#<%= u.id %></strong></td>
+                                            <td><code><%= u.username %></code></td>
+                                            <td><%= u.full_name || '-' %></td>
+                                            <td>
+                                                <span class="badge <%= u.role === 'ADMIN' ? 'badge-primary' : 'badge-secondary' %>">
+                                                    <%= u.role %>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <% if (u.blocked) { %>
+                                                    <span class="text-danger">🚫 Zablokowany</span>
+                                                <% } else { %>
+                                                    <span class="text-success">✅ Aktywny</span>
+                                                <% } %>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group">
+                                                    <form method="post" action="/admin/users/<%= u.id %>/block" style="display: inline;">
+                                                        <button type="submit" class="btn btn-<%= u.blocked ? 'success' : 'warning' %> btn-sm">
+                                                            <%= u.blocked ? '✅ Odblokuj' : '🚫 Zablokuj' %>
+                                                        </button>
+                                                    </form>
+                                                    
+                                                    <a href="/admin/users/<%= u.id %>/edit" class="btn btn-primary btn-sm">
+                                                        ✏️ Edytuj
+                                                    </a>
+                                                    
+                                                    <form method="post" action="/admin/users/<%= u.id %>/delete" style="display: inline;">
+                                                        <button type="submit" class="btn btn-danger btn-sm" 
+                                                                onclick="return confirm('Czy na pewno chcesz usunąć użytkownika <%= u.username %>?')">
+                                                            🗑️ Usuń
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <% }) %>
+                                </tbody>
+                            </table>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+
+            <!-- Add User Form -->
+            <div class="card">
+                <div class="card-header">
+                    Dodaj nowego użytkownika
+                </div>
+                <div class="card-body">
+                    <form method="post" action="/admin/users/add" id="addUserForm">
+                        <div class="form-group">
+                            <label for="new_username">Nazwa użytkownika *</label>
+                            <input type="text" id="new_username" name="username" 
+                                   class="form-control" required 
+                                   placeholder="Wprowadź nazwę użytkownika">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="full_name">Imię i nazwisko</label>
+                            <input type="text" id="full_name" name="full_name" 
+                                   class="form-control" 
+                                   placeholder="Opcjonalnie - pełna nazwa użytkownika">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="role">Rola</label>
+                            <select id="role" name="role" class="form-control">
+                                <option value="USER">USER</option>
+                                <option value="ADMIN">ADMIN</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="temp_password">Hasło tymczasowe *</label>
+                            <div class="d-flex gap-1 align-center">
+                                <input type="password" id="temp_password" name="temp_password" 
+                                       class="form-control" required 
+                                       placeholder="Wygeneruj lub wprowadź hasło">
+                                <button type="button" id="generateOtpBtn" class="btn btn-warning">
+                                    🔐 Generuj OTP
+                                </button>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-success">
+                            👤 Dodaj użytkownika
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </main>
+
+        <footer style="text-align: center; padding: 2rem; color: #6c757d; border-top: 1px solid #dee2e6;">
+            <p>&copy; <%= new Date().getFullYear() %> System Bezpieczeństwa. Wszelkie prawa zastrzeżone.</p>
+        </footer>
+    </div>
+
+    <script src="/js/admin-users.js"></script>
+</body>
+</html>

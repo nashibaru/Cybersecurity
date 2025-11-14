@@ -1,88 +1,155 @@
-let db;
+import sqlite3 from 'sqlite3';
+import { open } from 'sqlite';
+import argon2 from 'argon2';
 
-async function initDb(sqlite3, open, argon2) {
-  db = await open({ filename: './data/db.sqlite', driver: sqlite3.Database });
+let db = null;
 
-  await db.exec(`
+const SCHEMA = {
+  users: `
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       username TEXT UNIQUE NOT NULL,
       full_name TEXT,
-      password_hash TEXT,
+      password_hash TEXT NOT NULL,
       role TEXT NOT NULL DEFAULT 'USER',
       blocked INTEGER DEFAULT 0,
       first_login INTEGER DEFAULT 1,
       pwd_set_date TEXT,
-      pwd_valid_days INTEGER DEFAULT 90
-    );
-  `);
-
-  await db.exec(`
+      pwd_valid_days INTEGER DEFAULT 90,
+      failed_attempts INTEGER DEFAULT 0,
+      lock_until TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+  `,
+  pwd_history: `
     CREATE TABLE IF NOT EXISTS pwd_history (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
       password_hash TEXT NOT NULL,
-      set_date TEXT NOT NULL
-    );
-  `);
-
-  await db.exec(`
+      set_date TEXT NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    )
+  `,
+  settings: `
     CREATE TABLE IF NOT EXISTS settings (
       id INTEGER PRIMARY KEY CHECK (id = 1),
       min_length INTEGER DEFAULT 8,
       require_special INTEGER DEFAULT 1,
       require_lowercase INTEGER DEFAULT 1,
       require_uppercase INTEGER DEFAULT 0,
-      pwd_valid_days INTEGER DEFAULT 90
-    );
-  `);
-
-  await db.exec(`
+      pwd_valid_days INTEGER DEFAULT 90,
+      session_timeout_minutes INTEGER DEFAULT 30,
+      login_max_attempts INTEGER DEFAULT 5,
+      lock_minutes INTEGER DEFAULT 15,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+  `,
+  activity_logs: `
     CREATE TABLE IF NOT EXISTS activity_logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       username TEXT,
       event TEXT NOT NULL,
       details TEXT,
-      created_at TEXT NOT NULL
-    );
-  `);
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      ip_address TEXT
+    )
+  `
+};
 
-  const settings = await db.get("SELECT * FROM settings WHERE id=1");
-  if (!settings) {
-    await db.run(`INSERT INTO settings (id, min_length, require_special, require_lowercase, require_uppercase, pwd_valid_days)
-                  VALUES (1, 8, 1, 1, 0, 90)`);
+const DEFAULT_SETTINGS = {
+  min_length: 8,
+  require_special: 1,
+  require_lowercase: 1,
+  require_uppercase: 0,
+  pwd_valid_days: 90,
+  session_timeout_minutes: 30,
+  login_max_attempts: 5,
+  lock_minutes: 15
+};
+
+const DEFAULT_ADMIN = {
+  username: 'ADMIN',
+  full_name: 'Administrator',
+  password: 'Admin@123',
+  role: 'ADMIN'
+};
+
+export async function initDb() {
+  try {
+    db = await open({ 
+      filename: './data/db.sqlite', 
+      driver: sqlite3.Database 
+    });
+
+    // Create tables
+    for (const [tableName, schema] of Object.entries(SCHEMA)) {
+      await db.exec(schema);
+      console.log(`✅ Table ${tableName} initialized`);
+    }
+
+    // Initialize default settings
+    await initializeDefaultSettings();
+    
+    // Initialize admin user
+    await initializeAdminUser();
+
+    console.log('🎉 Database initialization completed');
+    return db;
+  } catch (error) {
+    console.error('💥 Database initialization failed:', error);
+    throw error;
   }
+}
 
-  const admin = await db.get("SELECT * FROM users WHERE username = 'ADMIN' COLLATE NOCASE");
-  if (!admin) {
-    const defaultPw = 'Admin@123';
-    const h = await argon2.hash(defaultPw);
+async function initializeDefaultSettings() {
+  const existingSettings = await db.get("SELECT * FROM settings WHERE id = 1");
+  
+  if (!existingSettings) {
+    await db.run(
+      `INSERT INTO settings (id, min_length, require_special, require_lowercase, require_uppercase, pwd_valid_days, session_timeout_minutes, login_max_attempts, lock_minutes)
+       VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      Object.values(DEFAULT_SETTINGS)
+    );
+    console.log('✅ Default settings initialized');
+  }
+}
+
+async function initializeAdminUser() {
+  const existingAdmin = await db.get("SELECT * FROM users WHERE username = 'ADMIN' COLLATE NOCASE");
+  
+  if (!existingAdmin) {
+    const passwordHash = await argon2.hash(DEFAULT_ADMIN.password);
     const now = new Date().toISOString();
-    const info = await db.run(
-      `INSERT INTO users (username, full_name, password_hash, role, blocked, first_login, pwd_set_date, pwd_valid_days)
-       VALUES (?, ?, ?, 'ADMIN', 0, 1, ?, 90)`,
-      ['ADMIN', 'Administrator', h, now]
+    
+    const result = await db.run(
+      `INSERT INTO users (username, full_name, password_hash, role, first_login, pwd_set_date)
+       VALUES (?, ?, ?, ?, 1, ?)`,
+      [DEFAULT_ADMIN.username, DEFAULT_ADMIN.full_name, passwordHash, DEFAULT_ADMIN.role, now]
     );
-    const uid = info.lastID;
-    await db.run("INSERT INTO pwd_history (user_id, password_hash, set_date) VALUES (?, ?, ?)", [uid, h, now]);
-    console.log("Utworzono domyślnego ADMIN: 'ADMIN' z hasłem 'Admin@123' (pierwsze logowanie wymaga zmiany hasła).");
+
+    await db.run(
+      "INSERT INTO pwd_history (user_id, password_hash, set_date) VALUES (?, ?, ?)",
+      [result.lastID, passwordHash, now]
+    );
+
+    console.log(`✅ Default admin user created: ${DEFAULT_ADMIN.username} / ${DEFAULT_ADMIN.password}`);
   }
 }
 
-/**
- * Znajduje użytkownika po nazwie w bazie.
- * @param {string} username 
- */
-async function findUserByUsername(username) {
-  return db.get("SELECT * FROM users WHERE username = ? COLLATE NOCASE", [username]);
+export function getDb() {
+  if (!db) {
+    throw new Error('Database not initialized. Call initDb() first.');
+  }
+  return db;
 }
 
-function getDb() {
-  return db;
+export async function findUserByUsername(username) {
+  return getDb().get("SELECT * FROM users WHERE username = ? COLLATE NOCASE", [username]);
 }
 
 export default {
   initDb,
-  findUserByUsername,
-  getDb
+  getDb,
+  findUserByUsername
 };

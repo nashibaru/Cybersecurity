@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logowanie</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Logowanie</h1>
+        </header>
+
+        <main>
+            <div class="form-container" style="max-width: 400px; margin: 2rem auto;">
+                <div class="page-header">
+                    <h2>Logowanie do systemu</h2>
+                </div>
+
+                <!-- Alert Messages -->
+                <% if (message) { %>
+                    <div class="alert alert-error">
+                        <%= message %>
+                    </div>
+                <% } %>
+
+                <form method="post" action="/login">
+                    <input type="hidden" name="returnTo" value="<%= returnTo || '' %>">
+                    
+                    <div class="form-group">
+                        <label for="username">Nazwa użytkownika:</label>
+                        <input type="text" id="username" name="username" 
+                               class="form-control" required 
+                               placeholder="Wprowadź nazwę użytkownika"
+                               value="<%= typeof username !== 'undefined' ? username : '' %>">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Hasło:</label>
+                        <input type="password" id="password" name="password" 
+                               class="form-control" required 
+                               placeholder="Wprowadź hasło">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                        Zaloguj się
+                    </button>
+                </form>
+
+                <div class="text-center mt-3">
+                    <p>System zarządzania bezpieczeństwem</p>
+                </div>
+            </div>
+        </main>
+
+        <footer style="text-align: center; padding: 2rem; color: #6c757d; border-top: 1px solid #dee2e6;">
+            <p>&copy; <%= new Date().getFullYear() %> System Bezpieczeństwa. Wszelkie prawa zastrzeżone.</p>
+        </footer>
+    </div>
+</body>
+</html>

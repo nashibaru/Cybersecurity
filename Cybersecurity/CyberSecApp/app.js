@@ -1,37 +1,38 @@
-// app.js
 import express from 'express';
-import init from './app-modules/db.js'; // twoja inicjalizacja bazy
-import configureApp from './app-modules/app-config.js';
+import { initDb } from './app-modules/db.js';
+import configureApp from './config/app-config.js';
+import { PORT } from './config/env.js';
 
-import authRoutes from './app-modules/auth-routes.js';
-import userRoutes from './app-modules/user-routes.js';
-import adminSettingsRoutes from './app-modules/admin-settings.js';
-import adminUsersRoutes from './app-modules/admin-users.js';
-import adminLogsRoutes from './app-modules/admin-logs.js';
-import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
-import argon2 from 'argon2';
-
-const { initDb } = init;
-const PORT = process.env.PORT || 3000;
 const app = express();
 
-// skonfiguruj aplikację, przekazując routery i ewentualnie sekret sesji
-configureApp(app, {
-  authRoutes,
-  userRoutes,
-  adminSettingsRoutes,
-  adminUsersRoutes,
-  adminLogsRoutes,
-  sessionSecret: process.env.SESSION_SECRET
+async function startServer() {
+  try {
+    // Initialize database first
+    await initDb();
+
+    // Configure app with all middleware and routes
+    configureApp(app);
+
+    // Start server
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running at http://localhost:${PORT}`);
+      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+    });
+  } catch (error) {
+    console.error('💥 Server startup failed:', error);
+    process.exit(1);
+  }
+}
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('💥 Uncaught Exception:', error);
+  process.exit(1);
 });
 
-// uruchom DB i serwer
-initDb(sqlite3, open, argon2)
-  .then(() => {
-    app.listen(PORT, () => console.log(`Server uruchomiony http://localhost:${PORT}`));
-  })
-  .catch(err => {
-    console.error('Błąd inicjalizacji bazy:', err);
-    process.exit(1);
-  });
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
+
+startServer();

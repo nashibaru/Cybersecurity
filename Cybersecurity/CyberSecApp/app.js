@@ -1,3 +1,5 @@
+import dotenv from 'dotenv';
+dotenv.config();
 import express from 'express';
 import { initDb } from './app-modules/db.js';
 import configureApp from './config/app-config.js';

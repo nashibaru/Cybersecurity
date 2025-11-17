@@ -2,6 +2,11 @@ import dbModule from '../app-modules/db.js';
 const { getDb } = dbModule;
 
 export function ensureAuthenticated(req, res, next) {
+    console.log('ensureAuthenticated check:', {
+        hasSession: !!req.session,
+        userId: req.session?.userId,
+        path: req.path
+    });
     if (req?.session?.userId) return next();
 
     const returnTo = req?.originalUrl ? `?returnTo=${encodeURIComponent(req.originalUrl)}` : '';

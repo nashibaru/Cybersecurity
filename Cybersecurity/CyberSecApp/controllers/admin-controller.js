@@ -3,6 +3,7 @@ import { logEvent } from '../app-modules/logger.js';
 import { generatePassword } from '../app-modules/otp.js';
 import argon2 from 'argon2';
 import { validatePasswordRequirements, checkPasswordHistory } from '../middleware/validation-middleware.js';
+import { LicenseService } from '../app-modules/license-service.js';
 
 const { getDb } = dbModule;
 
@@ -248,6 +249,100 @@ export class AdminController {
         } catch (error) {
             console.error('User update error:', error);
             res.status(500).render('errors/500', { title: 'Błąd serwera' });
+        }
+    }
+
+     static async generateLicense(req, res) {
+        try {
+            const db = getDb();
+            const keyLength = parseInt(req.headers['key-length']) || 10;
+            const licenseKey = LicenseService.generateLicenseKey(keyLength);
+            const shiftKey = LicenseService.generateShiftKey();
+            const encryptedKey = LicenseService.encrypt(licenseKey, shiftKey);
+            
+            // Store the license in database
+            await db.run(
+                "INSERT INTO license_keys (license_key, shift_key, encrypted_key, created_by) VALUES (?, ?, ?, ?)",
+                [licenseKey, shiftKey, encryptedKey, req.session.username]
+            );
+            
+            await logEvent(req.session.username, 'license_generated', `Wygenerowano klucz licencyjny: ${encryptedKey}`);
+            
+            // Return both original and encrypted for display
+            res.json({
+                success: true,
+                licenseKey: licenseKey,
+                encryptedKey: encryptedKey,
+                shiftKey: shiftKey,
+                message: 'Klucz licencyjny wygenerowany pomyślnie'
+            });
+            
+        } catch (error) {
+            console.error('License generation error:', error);
+            res.status(500).json({ 
+                success: false, 
+                message: 'Błąd podczas generowania klucza licencyjnego' 
+            });
+        }
+    }
+
+    // License Management Page
+    static async getLicensesPage(req, res) {
+        try {
+            res.render('admin/licenses', {
+                user: {
+                    username: req.session.username,
+                    role: req.session.role
+                },
+                title: 'Zarządzanie Kluczami Licencyjnymi'
+            });
+        } catch (error) {
+            console.error('Licenses page error:', error);
+            res.status(500).render('errors/500', { title: 'Błąd serwera' });
+        }
+    }
+
+    // License Statistics
+    static async getLicenseStats(req, res) {
+        try {
+            const db = getDb();
+            
+            const totalUsers = await db.get("SELECT COUNT(*) as count FROM users");
+            const premiumUsers = await db.get("SELECT COUNT(*) as count FROM users WHERE is_key = 1");
+            const trialUsers = await db.get("SELECT COUNT(*) as count FROM users WHERE is_key = 0 AND free_uses > 0");
+            
+            res.json({
+                success: true,
+                totalUsers: totalUsers.count,
+                premiumUsers: premiumUsers.count,
+                trialUsers: trialUsers.count
+            });
+            
+        } catch (error) {
+            console.error('License stats error:', error);
+            res.status(500).json({ success: false, message: 'Błąd pobierania statystyk' });
+        }
+    }
+
+    // Get all licenses
+    static async getLicenses(req, res) {
+        try {
+            const db = getDb();
+            const licenses = await db.all(`
+                SELECT lk.*, u.username as used_by_username 
+                FROM license_keys lk 
+                LEFT JOIN users u ON lk.used_by = u.id 
+                ORDER BY lk.created_at DESC
+            `);
+            
+            res.json({ success: true, licenses });
+            
+        } catch (error) {
+            console.error('Licenses fetch error:', error);
+            res.status(500).json({ 
+                success: false, 
+                message: 'Błąd podczas pobierania kluczy licencyjnych' 
+            });
         }
     }
 }

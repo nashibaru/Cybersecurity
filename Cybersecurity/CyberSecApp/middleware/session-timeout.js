@@ -144,11 +144,20 @@ export function sessionActivityTracker(req, res, next) {
     req.session.activity.requestCount++;
     req.session.activity.lastRequestTime = new Date().toISOString();
 
-    // Regenerate session ID on significant events to prevent fixation
+    // DON'T regenerate session for critical operations like password change
+    const safeRoutes = [
+        '/user/change-password',
+        '/verify-captcha',
+        '/captcha'
+    ];
+    
+    const isSafeRoute = safeRoutes.some(route => req.path.includes(route));
+    
+    // Only regenerate session for non-critical routes
     const shouldRegenerate = 
+        !isSafeRoute &&
         req.method === 'POST' && 
         (req.path.includes('/login') || 
-         req.path.includes('/change-password') ||
          req.session.activity.requestCount % 50 === 0); // Every 50 requests
 
     if (shouldRegenerate) {

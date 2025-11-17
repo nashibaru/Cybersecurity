@@ -13,12 +13,28 @@ export function securityHeadersMiddleware() {
         directives: {
           defaultSrc: ["'self'"],
           styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles for EJS
-          scriptSrc: ["'self'"], // Only allow scripts from same origin
+          scriptSrc: [
+            "'self'", 
+            "https://www.google.com", 
+            "https://www.gstatic.com"
+          ], // Allow reCAPTCHA scripts
+          scriptSrcElem: [
+            "'self'", 
+            "https://www.google.com", 
+            "https://www.gstatic.com"
+          ], // Specifically for script elements
+          connectSrc: [
+            "'self'", 
+            "https://www.google.com", 
+            "https://www.gstatic.com",
+            "https://www.google.com/recaptcha/",
+            "https://www.gstatic.com/recaptcha/"
+          ], // Allow reCAPTCHA API calls
           imgSrc: ["'self'", "data:", "https:"],
           fontSrc: ["'self'"],
           objectSrc: ["'none'"],
           mediaSrc: ["'self'"],
-          frameSrc: ["'none'"],
+          frameSrc: ["'self'", "https://www.google.com"], // Allow reCAPTCHA iframe
           baseUri: ["'self'"],
           formAction: ["'self'"],
           frameAncestors: ["'none'"], // Prevent clickjacking
@@ -85,23 +101,79 @@ export function securityHeadersMiddleware() {
  * Specific CSP for different routes
  */
 export function dynamicCSP(req, res, next) {
-  // Allow inline scripts for specific pages that need it
-  if (req.path.includes('/admin/users') || req.path.includes('/admin/user-edit')) {
-    helmet.contentSecurityPolicy({
-      directives: {
-        defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'"], // We'll allow specific inline scripts via nonce in production
-        imgSrc: ["'self'", "data:", "https:"],
-        fontSrc: ["'self'"],
-        objectSrc: ["'none'"],
-        baseUri: ["'self'"],
-        formAction: ["'self'"]
-      }
-    })(req, res, next);
-  } else {
-    next();
+
+  // For licenses route, allow inline scripts
+  if (req.path.includes('/admin/licenses')) {
+    // Remove existing CSP header
+    res.removeHeader('Content-Security-Policy');
+    
+    // Set specific CSP for licenses that allows inline scripts
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; " +
+      "script-src 'self' https://www.google.com https://www.gstatic.com 'unsafe-inline'; " +
+      "script-src-elem 'self' https://www.google.com https://www.gstatic.com 'unsafe-inline'; " +
+      "style-src 'self' 'unsafe-inline'; " +
+      "frame-src 'self' https://www.google.com; " +
+      "img-src 'self' data: https:; " +
+      "font-src 'self'; " +
+      "connect-src 'self' https://www.google.com https://www.gstatic.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; " +
+      "object-src 'none'; " +
+      "base-uri 'self'; " +
+      "form-action 'self'; " +
+      "frame-ancestors 'none'"
+    );
+    return next();
   }
+
+  // For change-password route, ensure reCAPTCHA works
+  if (req.path.includes('/user/change-password')) {
+    // Remove existing CSP header
+    res.removeHeader('Content-Security-Policy');
+    
+    // Set specific CSP for change-password that allows reCAPTCHA
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; " +
+      "script-src 'self' https://www.google.com https://www.gstatic.com; " +
+      "script-src-elem 'self' https://www.google.com https://www.gstatic.com; " +
+      "style-src 'self' 'unsafe-inline'; " +
+      "frame-src 'self' https://www.google.com; " +
+      "img-src 'self' data: https:; " +
+      "font-src 'self'; " +
+      "connect-src 'self' https://www.google.com https://www.gstatic.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; " +
+      "object-src 'none'; " +
+      "base-uri 'self'; " +
+      "form-action 'self'; " +
+      "frame-ancestors 'none'"
+    );
+    return next();
+  }
+  
+  // For other routes that need special CSP
+  if (req.path.includes('/admin/users') || req.path.includes('/admin/user-edit')) {
+    // Remove existing CSP header
+    res.removeHeader('Content-Security-Policy');
+    
+    // Set specific CSP for admin routes
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; " +
+      "script-src 'self' https://www.google.com https://www.gstatic.com; " +
+      "script-src-elem 'self' https://www.google.com https://www.gstatic.com; " +
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+      "frame-src 'self' https://www.google.com; " +
+      "font-src 'self' https://fonts.gstatic.com; " +
+      "img-src 'self' data: https:; " +
+      "connect-src 'self' https://www.google.com https://www.gstatic.com; " +
+      "object-src 'none'; " +
+      "base-uri 'self'; " +
+      "form-action 'self'"
+    );
+    return next();
+  }
+  
+  next();
 }
 
 /**

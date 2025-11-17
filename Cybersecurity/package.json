@@ -12,17 +12,24 @@
     "lint": "eslint .",
     "setup": "node scripts/setup.js"
   },
-  "keywords": ["cybersecurity", "express", "sqlite"],
+  "keywords": [
+    "cybersecurity",
+    "express",
+    "sqlite"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "argon2": "^0.28.5",
+    "axios": "^1.13.2",
     "connect-sqlite3": "^0.9.13",
+    "dotenv": "^17.2.3",
     "ejs": "^3.1.10",
     "express": "^5.1.0",
     "express-rate-limit": "^6.4.0",
     "express-session": "^1.17.3",
     "helmet": "^5.1.0",
+    "node-fetch": "^3.3.2",
     "sqlite": "^4.1.1",
     "sqlite3": "^5.0.8"
   },

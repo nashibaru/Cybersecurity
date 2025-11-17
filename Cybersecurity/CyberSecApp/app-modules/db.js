@@ -19,7 +19,9 @@ const SCHEMA = {
       failed_attempts INTEGER DEFAULT 0,
       lock_until TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      free_uses INTEGER DEFAULT 5,
+      is_key BOOLEAN DEFAULT 0
     )
   `,
   pwd_history: `
@@ -53,6 +55,20 @@ const SCHEMA = {
       details TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       ip_address TEXT
+    )
+  `,
+  license_keys: `
+    CREATE TABLE IF NOT EXISTS license_keys (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      license_key TEXT NOT NULL UNIQUE,
+      shift_key INTEGER NOT NULL,
+      encrypted_key TEXT NOT NULL,
+      created_by TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      used_by INTEGER,
+      used_at TEXT,
+      is_used BOOLEAN DEFAULT 0,
+      FOREIGN KEY (used_by) REFERENCES users (id) ON DELETE SET NULL
     )
   `
 };
@@ -93,7 +109,6 @@ export async function initDb() {
     
     // Initialize admin user
     await initializeAdminUser();
-
     console.log('🎉 Database initialization completed');
     return db;
   } catch (error) {

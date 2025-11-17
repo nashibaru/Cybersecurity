@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        .captcha-container {
+            max-width: 600px;
+            margin: 2rem auto;
+            text-align: center;
+        }
+        .captcha-question {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            color: #333;
+        }
+        .captcha-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 2rem;
+        }
+        .captcha-image {
+            position: relative;
+            border: 3px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .captcha-image:hover {
+            border-color: #666;
+            transform: scale(1.02);
+        }
+        .captcha-image.selected {
+            border-color: #28a745;
+            background-color: #f8fff9;
+            box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+        }
+        .captcha-image img {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            display: block;
+        }
+        .captcha-checkbox {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border: 2px solid #666;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .captcha-image.selected .captcha-checkbox {
+            background: #28a745;
+            border-color: #28a745;
+        }
+        .captcha-image.selected .captcha-checkbox::after {
+            content: '✓';
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .captcha-submit {
+            padding: 12px 30px;
+            font-size: 1.1rem;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        .captcha-submit:hover:not(:disabled) {
+            background: #0056b3;
+        }
+        .captcha-submit:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .captcha-info {
+            background: #e9ecef;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        .selected-count {
+            text-align: center;
+            color: #666;
+            margin-bottom: 1rem;
+        }
+        .image-label {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 4px;
+            font-size: 0.8rem;
+            text-align: center;
+        }
+        .image-placeholder {
+            width: 100%;
+            height: 120px;
+            background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Weryfikacja bezpieczeństwa</h1>
+        </header>
+
+        <main>
+            <div class="captcha-container">
+                <div class="captcha-info">
+                    <p>🔒 <strong>Weryfikacja CAPTCHA wymagana</strong></p>
+                    <p>Proszę potwierdzić, że nie jesteś robotem, rozwiązując poniższe zadanie.</p>
+                </div>
+
+                <% if (message) { %>
+                    <div class="alert alert-error">
+                        <%= message %>
+                    </div>
+                <% } %>
+
+                <form method="post" action="/verify-captcha" id="captchaForm">
+                    <div class="captcha-question">
+                        <strong><%= challenge.question %></strong>
+                    </div>
+
+                    <div class="captcha-grid" id="captchaGrid">
+                        <% challenge.images.forEach((image, index) => { %>
+                            <div class="captcha-image" data-image-id="<%= image.id %>">
+                                <img src="<%= image.url %>" alt="<%= image.alt %>">
+                                <div class="captcha-checkbox"></div>
+                                <input type="checkbox" name="captcha_selections" value="<%= image.id %>" style="display: none;">
+                                <div class="image-label">Obraz <%= index + 1 %></div>
+                            </div>
+                        <% }) %>
+                    </div>
+
+                    <div class="selected-count">
+                        <small class="text-muted">Zaznaczono: <span id="selectedCount">0</span> obrazów</small>
+                    </div>
+
+                    <button type="submit" class="captcha-submit" id="submitBtn" disabled>
+                        Zweryfikuj
+                    </button>
+                </form>
+
+                <% if (process.env.SKIP_CAPTCHA === 'true') { %>
+                    <div class="alert alert-info mt-3">
+                        <strong>Tryb deweloperski:</strong> CAPTCHA jest wyłączona. Możesz kliknąć "Zweryfikuj" bez zaznaczania obrazów.
+                    </div>
+                <% } %>
+            </div>
+        </main>
+    </div>
+
+    <!-- Include the external JavaScript file -->
+    <script src="/js/captcha.js"></script>
+</body>
+</html>

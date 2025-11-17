@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zarządzanie Kluczami Licencyjnymi</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        .license-item {
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+        }
+        .license-item.used {
+            border-left-color: #28a745;
+            background: #f0fff4;
+        }
+        .license-item.expired {
+            border-left-color: #dc3545;
+            background: #fff5f5;
+        }
+        .key-display {
+            font-family: 'Courier New', monospace;
+            background: #2d3748;
+            color: #fff;
+            padding: 10px;
+            border-radius: 5px;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🗝️ Zarządzanie Kluczami Licencyjnymi</h1>
+            <% if (user) { %>
+                <small class="user-info">
+                    Zalogowany jako: <strong><%= user.username %></strong> (<%= user.role %>)
+                </small>
+            <% } %>
+        </header>
+
+        <main>
+            <div class="page-header">
+                <h2>Generowanie i zarządzanie kluczami licencyjnymi</h2>
+            </div>
+
+            <nav class="nav-links">
+                <a href="/admin/settings">Ustawienia</a>
+                <a href="/admin/users">Użytkownicy</a>
+                <a href="/admin/licenses">Klucze Licencyjne</a>
+                <a href="/admin/logs">Logi</a>
+                <a href="/user/change-password">Zmiana hasła</a>
+                <a href="/logout">Wyloguj</a>
+            </nav>
+
+            <!-- License Generation Card -->
+            <div class="card">
+                <div class="card-header">
+                    🔑 Generowanie Nowego Klucza Licencyjnego
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label for="keyLength">Długość klucza:</label>
+                        <select id="keyLength" class="form-control" style="width: auto; display: inline-block; margin-left: 10px;">
+                            <option value="8">8 znaków</option>
+                            <option value="10" selected>10 znaków</option>
+                            <option value="12">12 znaków</option>
+                            <option value="16">16 znaków</option>
+                        </select>
+                    </div>
+
+                    <button type="button" id="generateLicenseBtn" class="btn btn-primary">
+                        🗝️ Wygeneruj Klucz Licencyjny
+                    </button>
+
+                    <div id="licenseResult" class="mt-3" style="display: none;">
+                        <div class="alert alert-info">
+                            <h5>✅ Wygenerowany Klucz Licencyjny</h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Klucz Oryginalny:</strong></p>
+                                    <div class="key-display" id="originalKey"></div>
+                                    <small class="text-muted">(Przechowuj bezpiecznie)</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>Klucz Zaszyfrowany:</strong></p>
+                                    <div class="key-display" id="encryptedKey"></div>
+                                    <small class="text-muted">(Przekaż użytkownikowi)</small>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <p><strong>Klucz Przesunięcia:</strong> <span id="shiftKey" class="badge badge-secondary" style="font-size: 1.2em;"></span></p>
+                                <small class="text-muted">
+                                    Użytkownik musi wprowadzić: <strong>Zaszyfrowany Klucz</strong> + <strong>Klucz Przesunięcia</strong>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Licenses List Card -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    📋 Historia Wygenerowanych Kluczy
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Zaszyfrowany Klucz</th>
+                                    <th>Przesunięcie</th>
+                                    <th>Status</th>
+                                    <th>Użyty przez</th>
+                                    <th>Data utworzenia</th>
+                                    <th>Data użycia</th>
+                                </tr>
+                            </thead>
+                            <tbody id="licensesTableBody">
+                                <tr>
+                                    <td colspan="6" class="text-center">Ładowanie danych...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <small class="text-muted">
+                            Liczba kluczy: <span id="totalLicenses">0</span> | 
+                            Użyte: <span id="usedLicenses">0</span> | 
+                            Dostępne: <span id="availableLicenses">0</span>
+                        </small>
+                        <button type="button" id="refreshLicensesBtn" class="btn btn-sm btn-outline-secondary">
+                            🔄 Odśwież
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics Card -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    📊 Statystyki Licencyjne
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h3 id="totalUsers">0</h3>
+                                <small class="text-muted">Wszyscy użytkownicy</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h3 id="premiumUsers">0</h3>
+                                <small class="text-muted">Użytkownicy z licencją</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h3 id="trialUsers">0</h3>
+                                <small class="text-muted">Użytkownicy trial</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer style="text-align: center; padding: 2rem; color: #6c757d; border-top: 1px solid #dee2e6;">
+            <p>&copy; <%= new Date().getFullYear() %> System Bezpieczeństwa. Wszelkie prawa zastrzeżone.</p>
+        </footer>
+    </div>
+
+    <script src="/js/licenses.js"></script>
+</body>
+</html>

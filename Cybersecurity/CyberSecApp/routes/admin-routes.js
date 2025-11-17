@@ -19,6 +19,10 @@ router.post('/users/:id/delete', AdminController.deleteUser);
 router.post('/users/add', AdminController.createUser);
 router.get('/users/:id/edit', AdminController.editUserForm);
 router.post('/users/:id/edit', AdminController.updateUser);
+router.get('/licenses', AdminController.getLicensesPage); // New page route
+router.post('/licenses/generate', AdminController.generateLicense);
+router.get('/licenses/list', AdminController.getLicenses); // Renamed for clarity
+router.get('/licenses/stats', AdminController.getLicenseStats); // New stats route
 
 // Logs routes
 router.get('/logs', async (req, res) => {

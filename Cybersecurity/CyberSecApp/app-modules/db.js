@@ -70,6 +70,17 @@ const SCHEMA = {
       is_used BOOLEAN DEFAULT 0,
       FOREIGN KEY (used_by) REFERENCES users (id) ON DELETE SET NULL
     )
+  `,
+  security_events: `
+    CREATE TABLE IF NOT EXISTS security_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      event_type TEXT NOT NULL,
+      description TEXT,
+      ip_address TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
   `
 };
 
@@ -103,7 +114,7 @@ export async function initDb() {
       await db.exec(schema);
       console.log(`✅ Table ${tableName} initialized`);
     }
-
+    
     // Initialize default settings
     await initializeDefaultSettings();
     

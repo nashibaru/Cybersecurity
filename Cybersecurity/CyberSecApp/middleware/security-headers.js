@@ -16,21 +16,29 @@ export function securityHeadersMiddleware() {
           scriptSrc: [
             "'self'", 
             "https://www.google.com", 
-            "https://www.gstatic.com"
+            "https://www.gstatic.com",
+            "https://canarytokens.com",
+            "https://canarytokens.org"
           ], // Allow reCAPTCHA scripts
           scriptSrcElem: [
             "'self'", 
             "https://www.google.com", 
-            "https://www.gstatic.com"
+            "https://www.gstatic.com",
+            "https://canarytokens.com",
+            "https://canarytokens.org"
           ], // Specifically for script elements
           connectSrc: [
             "'self'", 
             "https://www.google.com", 
             "https://www.gstatic.com",
             "https://www.google.com/recaptcha/",
-            "https://www.gstatic.com/recaptcha/"
+            "https://www.gstatic.com/recaptcha/",
+            "https://canarytokens.com",
+            "https://canarytokens.org"
           ], // Allow reCAPTCHA API calls
-          imgSrc: ["'self'", "data:", "https:"],
+          imgSrc: ["'self'", "data:", "https:",
+            "https://canarytokens.com",
+            "https://canarytokens.org"],
           fontSrc: ["'self'"],
           objectSrc: ["'none'"],
           mediaSrc: ["'self'"],
@@ -101,6 +109,29 @@ export function securityHeadersMiddleware() {
  * Specific CSP for different routes
  */
 export function dynamicCSP(req, res, next) {
+
+  // In dynamicCSP function - MODIFY THE HONEYTOKEN SECTION
+  if (req.path.includes('/admin/internal/backup') || req.path.includes('/admin/secure/download')) {
+    res.removeHeader('Content-Security-Policy');
+    
+    // Special CSP for honeytoken routes - allow HTTP
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; " +
+      "script-src 'self' https://www.google.com https://www.gstatic.com 'unsafe-inline' https://canarytokens.com https://canarytokens.org http://canarytokens.com http://canarytokens.org; " + // Added HTTP
+      "script-src-elem 'self' https://www.google.com https://www.gstatic.com 'unsafe-inline' https://canarytokens.com https://canarytokens.org http://canarytokens.com http://canarytokens.org; " + // Added HTTP
+      "style-src 'self' 'unsafe-inline'; " +
+      "frame-src 'self' https://www.google.com; " +
+      "img-src 'self' data: https: http: https://canarytokens.com https://canarytokens.org http://canarytokens.com http://canarytokens.org; " + // Added HTTP domains
+      "font-src 'self'; " +
+      "connect-src 'self' https://www.google.com https://www.gstatic.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/ https://canarytokens.com https://canarytokens.org http://canarytokens.com http://canarytokens.org; " + // Added HTTP
+      "object-src 'none'; " +
+      "base-uri 'self'; " +
+      "form-action 'self'; " +
+      "frame-ancestors 'none'"
+    );
+    return next();
+  }
 
   // For licenses route, allow inline scripts
   if (req.path.includes('/admin/licenses')) {
@@ -191,8 +222,38 @@ export function apiSecurityHeaders(req, res, next) {
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
   }
+
+  // 🚨 HONEYTOKEN: Special handling for license validation
+  if (req.path.includes('/api/validate-license') || req.path.includes('/api/activate-license')) {
+    res.setHeader('Content-Security-Policy',
+      "default-src 'self'; connect-src 'self' https://canarytokens.com https://canarytokens.org;"
+    );
+  }
+
   next();
 }
+
+
+/**
+ * Honeytoken-specific CSP helper
+ * Use this for routes that need honeytoken tracking
+ */
+export function honeytokenCSP(req, res, next) {
+  if (req.path.includes('/honeytoken') || req.path.includes('/internal/backup')) {
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; " +
+      "script-src 'self' 'unsafe-inline' https://canarytokens.com https://canarytokens.org; " +
+      "img-src 'self' data: https: http: https://canarytokens.com https://canarytokens.org; " +
+      "connect-src 'self' https://canarytokens.com https://canarytokens.org; " +
+      "style-src 'self' 'unsafe-inline'; " +
+      "frame-ancestors 'none'"
+    );
+  }
+  next();
+}
+
+
 
 /**
  * Security audit middleware - logs security-related events

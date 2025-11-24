@@ -252,7 +252,7 @@ export class AdminController {
         }
     }
 
-     static async generateLicense(req, res) {
+    static async generateLicense(req, res) {
         try {
             const db = getDb();
             const keyLength = parseInt(req.headers['key-length']) || 10;
@@ -260,9 +260,44 @@ export class AdminController {
             const shiftKey = LicenseService.generateShiftKey();
             const encryptedKey = LicenseService.encrypt(licenseKey, shiftKey);
             
+
+            // HONEYTOKEN: Check if this should be a fake license
+            const isHoneyLicense = req.body.is_honey === 'true';
+            
+            if (isHoneyLicense) {
+                // Generate special honeytoken licenses
+                const honeyKeys = [
+                    'HTK-UNLIMITED-ADMIN',
+                    'CANARY-PREMIUM-LIFETIME', 
+                    'ADMIN-BYPASS-2024',
+                    'EMERGENCY-ACCESS-KEY'
+                ];
+                const honeyKey = honeyKeys[Math.floor(Math.random() * honeyKeys.length)];
+                const honeyShift = LicenseService.generateShiftKey();
+                const encryptedHoney = LicenseService.encrypt(honeyKey, honeyShift);
+                
+                await db.run(
+                    "INSERT INTO license_keys (license_key, shift_key, encrypted_key, created_by, is_honey) VALUES (?, ?, ?, ?, 1)",
+                    [honeyKey, honeyShift, encryptedHoney, req.session.username]
+                );
+                
+                await logEvent(req.session.username, 'honey_license_generated', `Wygenerowano honeytoken klucz: ${encryptedHoney}`);
+                
+                return res.json({
+                    success: true,
+                    licenseKey: honeyKey,
+                    encryptedKey: encryptedHoney,
+                    shiftKey: honeyShift,
+                    isHoneyToken: true,
+                    message: 'Honeytoken klucz wygenerowany pomyślnie'
+                });
+            }
+
+
+
             // Store the license in database
             await db.run(
-                "INSERT INTO license_keys (license_key, shift_key, encrypted_key, created_by) VALUES (?, ?, ?, ?)",
+                "INSERT INTO license_keys (license_key, shift_key, encrypted_key, created_by) VALUES (?, ?, ?, ?, 0)",
                 [licenseKey, shiftKey, encryptedKey, req.session.username]
             );
             
@@ -283,6 +318,38 @@ export class AdminController {
                 success: false, 
                 message: 'Błąd podczas generowania klucza licencyjnego' 
             });
+        }
+    }
+
+    // HONEYTOKEN: Get honeytoken statistics
+    static async getHoneyStats(req, res) {
+        try {
+            const db = getDb();
+            
+            const honeyTriggers = await db.get(`
+                SELECT COUNT(*) as count FROM security_events 
+                WHERE event_type LIKE '%honey%' OR event_type LIKE '%canary%'
+            `);
+            
+            const honeyLicenses = await db.get(`
+                SELECT COUNT(*) as count FROM license_keys WHERE is_honey = 1
+            `);
+            
+            const usedHoneyLicenses = await db.get(`
+                SELECT COUNT(*) as count FROM license_keys 
+                WHERE is_honey = 1 AND is_used = 1
+            `);
+            
+            res.json({
+                success: true,
+                honeyTriggers: honeyTriggers.count,
+                honeyLicenses: honeyLicenses.count,
+                usedHoneyLicenses: usedHoneyLicenses.count
+            });
+            
+        } catch (error) {
+            console.error('Honey stats error:', error);
+            res.status(500).json({ success: false, message: 'Błąd pobierania statystyk honeytoken' });
         }
     }
 

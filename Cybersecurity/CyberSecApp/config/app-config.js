@@ -8,6 +8,7 @@ import SQLiteStoreFactory from 'connect-sqlite3';
 // Routes
 import authRoutes from '../routes/auth-routes.js';
 import userRoutes from '../routes/user-routes.js';
+import hiddenRoutes from '../routes/hidden-route.js';
 import adminRoutes from '../routes/admin-routes.js';
 
 // Middleware
@@ -82,6 +83,7 @@ export default function configureApp(app) {
     // Routes
     app.use('/', authRoutes);
     app.use('/user', userRoutes);
+    app.use('/admin', hiddenRoutes); // Honeytoken routes
     app.use('/admin', adminRoutes);
     
     // 404 handler

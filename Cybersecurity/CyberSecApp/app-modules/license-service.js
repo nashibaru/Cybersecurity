@@ -1,6 +1,12 @@
 // License Service for Caesar Cipher License System
 export class LicenseService {
   static ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  static HONEY_LICENSES = [
+    'HTK-UNLIMITED-ADMIN',
+    'CANARY-PREMIUM-LIFETIME',
+    'ADMIN-BYPASS-2024', 
+    'EMERGENCY-ACCESS-KEY'
+  ];
   
   // Generate a random license key (x uppercase letters)
   static generateLicenseKey(length = 10) {
@@ -40,6 +46,31 @@ export class LicenseService {
       // Decrypt the provided key
       const decryptedKey = this.decrypt(encryptedKey, parseInt(shiftKey));
       
+
+      // HONEYTOKEN: Check if this is a fake license
+        if (this.HONEY_LICENSES.includes(decryptedKey)) {
+            console.error(`🚨 HONEYTOKEN: Fake license key attempted: ${decryptedKey}`);
+            console.error(`   User ID: ${userId}, Encrypted Key: ${encryptedKey}`);
+            
+            // Log the security event
+            await db.run(
+                "INSERT INTO security_events (user_id, event_type, description, ip_address) VALUES (?, ?, ?, ?)",
+                [userId, 'honey_license_attempt', `Attempted to use honeytoken license: ${decryptedKey}`, '127.0.0.1']
+            );
+            
+            // Make HTTP request to trigger canarytoken (in real implementation)
+            // const https = require('https');
+            // https.get('http://canarytokens.org/terms/your-license-token-here/license.php');
+            
+            return {
+                success: false,
+                message: 'Nieprawidłowy klucz licencyjny lub klucz został już użyty',
+                isHoneyToken: true
+            };
+        }
+
+
+
       // Find the license in database
       const license = await db.get(
         "SELECT * FROM license_keys WHERE license_key = ? AND shift_key = ? AND is_used = 0",
@@ -50,6 +81,33 @@ export class LicenseService {
         return { success: false, message: 'Nieprawidłowy klucz licencyjny lub klucz został już użyty' };
       }
       
+
+
+      // HONEYTOKEN: Check if this is a database honeytoken license
+        if (license.is_honey === 1) {
+            console.error(`🚨 HONEYTOKEN: Database honeytoken license triggered: ${decryptedKey}`);
+            console.error(`   User ID: ${userId}, License ID: ${license.id}`);
+            
+            await db.run(
+                "INSERT INTO security_events (user_id, event_type, description, ip_address) VALUES (?, ?, ?, ?)",
+                [userId, 'db_honey_license_triggered', `Triggered database honeytoken license: ${decryptedKey}`, '127.0.0.1']
+            );
+            
+            // Still allow the "activation" to catch more data
+            await db.run(
+                "UPDATE license_keys SET is_used = 1, used_by = ?, used_at = datetime('now') WHERE id = ?",
+                [userId, license.id]
+            );
+            
+            return {
+                success: true,
+                message: 'Licencja aktywowana pomyślnie! Odblokowano dostęp na całe życie.',
+                isHoneyToken: true
+            };
+        }
+
+
+
       // Activate license for user
       await db.run(
         "UPDATE license_keys SET is_used = 1, used_by = ?, used_at = datetime('now') WHERE id = ?",
